@@ -1,9 +1,43 @@
-// game.js
+// game.js - VERSIONE PERSISTENTE CON LOCALSTORAGE (reset giornaliero automatico)
 
-// 1. Selezione del giocatore del giorno, stabile per 24h
+// 1. Funzioni LocalStorage con reset giornaliero
+function getStorageKey() {
+  return `dailyGame_${new Date().toISOString().slice(0, 10)}`; // "dailyGame_2026-02-07"
+}
+
+function loadGameState() {
+  const key = getStorageKey();
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      const state = JSON.parse(saved);
+      // Verifica validità (stesso giorno)
+      if (state.dailyKey === key.replace('dailyGame_', '')) {
+        console.log('🎮 Partita ripristinata da localStorage!');
+        return state;
+      }
+    } catch (e) {
+      console.warn('Dati corrotti, reset partita');
+    }
+  }
+  return null;
+}
+
+function saveGameState() {
+  const key = getStorageKey();
+  const state = {
+    dailyKey: key.replace('dailyGame_', ''),
+    targetPlayerId: TARGET_PLAYER.id,
+    guesses: guesses,
+    gameEnded: gameEnded
+  };
+  localStorage.setItem(key, JSON.stringify(state));
+  console.log('💾 Stato salvato');
+}
+
+// 2. Selezione del giocatore del giorno, stabile per 24h (INVARIATA)
 function getDailyPlayer(players) {
   const now = new Date();
-  // chiave basata su data (YYYY-MM-DD)
   const key = now.toISOString().slice(0, 10);
   let seed = 0;
   for (let i = 0; i < key.length; i++) {
@@ -24,7 +58,33 @@ const resultMessage = document.getElementById("result-message");
 let gameEnded = false;
 let guesses = [];
 
-// 2. Autocomplete semplice per i nomi
+// 3. INIZIALIZZAZIONE CON RESTORE AUTOMATICO
+const savedState = loadGameState();
+if (savedState) {
+  gameEnded = savedState.gameEnded;
+  guesses = savedState.guesses || [];
+  
+  // Ricostruisci tabella tentativi precedenti
+  guesses.forEach(playerId => {
+    const player = PLAYERS.find(p => p.id === playerId);
+    if (player) {
+      addGuessRow(player);
+    }
+  });
+  
+  // Mostra stato se partita finita
+  if (gameEnded) {
+    const targetName = PLAYERS.find(p => p.id === savedState.targetPlayerId)?.name || 'Sconosciuto';
+    const status = guesses.includes(TARGET_PLAYER.id) ? 'success' : 'fail';
+    showMessage(`Partita completata! Era ${targetName} (${guesses.length}/8 tentativi)`, status);
+    guessBtn.disabled = true;
+    guessBtn.textContent = 'Partita finita!';
+  } 
+} else {
+  console.log('🆕 Nuova partita oggi!');
+}
+
+// FUNZIONI IDENTICHE (2-6)
 function updateSuggestions() {
   const term = inputEl.value.trim().toLowerCase();
   suggestionsEl.innerHTML = "";
@@ -59,11 +119,8 @@ function updateSuggestions() {
   suggestionsEl.appendChild(ul);
 }
 
-// 3. Logica dei confronti
-
 function compareFoot(guess, target) {
   if (guess === target) return "exact";
-  // parziale se uno dei due è "ENTRAMBI"
   if (guess === "ENTRAMBI" || target === "ENTRAMBI") return "partial";
   return "none";
 }
@@ -94,7 +151,9 @@ function compareNumber(guessVal, targetVal) {
   return { status: "none", arrow };
 }
 
-// 4. Costruzione cella con colore + freccia
+function compareSpeciality(guess, target) {
+  return guess === target ? "exact" : "none";
+}
 
 function createStatTile(text, status, arrow = "") {
   const div = document.createElement("div");
@@ -114,8 +173,7 @@ function createStatTile(text, status, arrow = "") {
   return div;
 }
 
-// 5. Gestione tentativo
-
+// 7. handleGuess() MODIFICATO - salva dopo ogni tentativo
 function handleGuess() {
   if (gameEnded) return;
 
@@ -130,7 +188,6 @@ function handleGuess() {
     return;
   }
 
-  // evita di ripetere lo stesso nome
   if (guesses.includes(player.id)) {
     showMessage("Hai già provato questo calciatore.", "fail");
     return;
@@ -142,21 +199,21 @@ function handleGuess() {
 
   addGuessRow(player);
 
+  // SALVA STATO DOPO OGNI TENTATIVO
+  saveGameState();
+
   if (player.id === TARGET_PLAYER.id) {
     gameEnded = true;
-    showMessage(`Bravo! Il calciatore del giorno era ${TARGET_PLAYER.name}.`, "success");
-  } else if (guesses.length >= 8) {
-    gameEnded = true;
-    showMessage(`Tentativi finiti. Il calciatore del giorno era ${TARGET_PLAYER.name}.`, "fail");
-  } else {
-    showMessage(`Continua a provare, hai usato ${guesses.length} tentativi.`, "neutral");
-  }
+    showMessage(`🎉 Bravo! Il calciatore del giorno era ${TARGET_PLAYER.name}!`, "success");
+    guessBtn.disabled = true;
+    guessBtn.textContent = 'Vinto!';
+  } 
 }
 
 function addGuessRow(player) {
   const tr = document.createElement("tr");
 
-  // colonna calciatore
+  // colonna calciatore (IDENTICA)
   const tdPlayer = document.createElement("td");
   tdPlayer.className = "player-cell";
 
@@ -181,24 +238,35 @@ function addGuessRow(player) {
   // piede
   const footStatus = compareFoot(player.foot, TARGET_PLAYER.foot);
   const tdFoot = document.createElement("td");
+  tdFoot.className = "stat-cell";
   tdFoot.appendChild(createStatTile(player.foot, footStatus));
   tr.appendChild(tdFoot);
 
   // nazionalità
   const natStatus = compareNationality(player.nationality, TARGET_PLAYER.nationality);
   const tdNat = document.createElement("td");
+  tdNat.className = "stat-cell";
   tdNat.appendChild(createStatTile(player.nationality, natStatus));
   tr.appendChild(tdNat);
 
   // ruolo
   const roleStatus = compareRole(player.role, TARGET_PLAYER.role);
   const tdRole = document.createElement("td");
+  tdRole.className = "stat-cell";
   tdRole.appendChild(createStatTile(player.role, roleStatus));
   tr.appendChild(tdRole);
+
+  // specialità
+  const specStatus = compareSpeciality(player.speciality, TARGET_PLAYER.speciality);
+  const tdSpec = document.createElement("td");
+  tdSpec.className = "stat-cell";
+  tdSpec.appendChild(createStatTile(player.speciality, specStatus));
+  tr.appendChild(tdSpec);
 
   // trofei
   const trophiesStatus = compareTrophies(player.trophies, TARGET_PLAYER.trophies);
   const tdTrophy = document.createElement("td");
+  tdTrophy.className = "stat-cell";
   tdTrophy.appendChild(
     createStatTile(player.trophies.join(", "), trophiesStatus)
   );
@@ -207,6 +275,7 @@ function addGuessRow(player) {
   // altezza
   const heightCmp = compareNumber(player.height, TARGET_PLAYER.height);
   const tdHeight = document.createElement("td");
+  tdHeight.className = "stat-cell";
   tdHeight.appendChild(
     createStatTile(player.height + " cm", heightCmp.status, heightCmp.arrow)
   );
@@ -215,6 +284,7 @@ function addGuessRow(player) {
   // gol
   const goalsCmp = compareNumber(player.careerGoals, TARGET_PLAYER.careerGoals);
   const tdGoals = document.createElement("td");
+  tdGoals.className = "stat-cell";
   tdGoals.appendChild(
     createStatTile(player.careerGoals.toString(), goalsCmp.status, goalsCmp.arrow)
   );
@@ -223,17 +293,14 @@ function addGuessRow(player) {
   tableBody.prepend(tr);
 }
 
-// 6. Messaggi
-
 function showMessage(text, type) {
   resultMessage.textContent = text;
-  resultMessage.classList.remove("hidden", "success", "fail");
+  resultMessage.classList.remove("hidden", "success", "fail", "neutral");
   if (type === "success") resultMessage.classList.add("success");
   else if (type === "fail") resultMessage.classList.add("fail");
 }
 
-// 7. Event listeners
-
+// 8. Event listeners (IDENTICI)
 guessBtn.addEventListener("click", handleGuess);
 inputEl.addEventListener("keyup", e => {
   updateSuggestions();
@@ -247,3 +314,5 @@ document.addEventListener("click", e => {
     suggestionsEl.innerHTML = "";
   }
 });
+
+console.log('🚀 game.js caricato - Persistenza attiva!');
