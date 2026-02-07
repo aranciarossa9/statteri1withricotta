@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Footballdle</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top-bar">
+    <div class="logo">
+      <span class="ball-icon">⚽</span>
+      <span class="logo-text">Footballdle</span>
+    </div>
+    <div class="mode-badge">Classico</div>
+  </header>
+
+  <main class="game-container">
+    <section class="intro">
+      <h1>Indovina il calciatore di oggi!</h1>
+      <p>Inserisci il nome di un calciatore e scopri quanto ti avvicini al giocatore del giorno.</p>
+    </section>
+
+    <section class="guess-panel">
+      <div class="search-wrapper">
+        <input
+          type="text"
+          id="player-input"
+          placeholder="Nome del calciatore"
+          autocomplete="off"
+        />
+        <button id="guess-btn">Prova</button>
+      </div>
+      <div id="suggestions" class="suggestions"></div>
+    </section>
+
+    <section class="legend">
+      <div class="legend-item"><span class="tile tile-green"></span> Corretto</div>
+      <div class="legend-item"><span class="tile tile-orange"></span> Parziale</div>
+      <div class="legend-item"><span class="tile tile-red"></span> Non corretto</div>
+    </section>
+
+    <section class="table-wrapper">
+      <table id="guesses-table">
+        <thead>
+          <tr>
+            <th>Calciatore</th>
+            <th>Piede</th>
+            <th>Nazionalità</th>
+            <th>Ruolo</th>
+            <th>Trofei</th>
+            <th>Altezza</th>
+            <th>Gol carriera</th>
+          </tr>
+        </thead>
+        <tbody id="guesses-body">
+        </tbody>
+      </table>
+    </section>
+
+    <section id="result-message" class="result-message hidden"></section>
+  </main>
+
+  <footer class="footer">
+    <p>Nuovo calciatore ogni 24 ore.</p>
+  </footer>
+
+  <script src="players.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
