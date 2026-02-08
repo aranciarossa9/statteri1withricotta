@@ -261,16 +261,27 @@ body::before {
 
 /* TILE COLORI */
 .tile {
-  width: 20px;
-  height: 20px;
-  border-radius: var(--tile-radius);
-  border: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  position: relative;
+  overflow: hidden;
 }
 
-.tile-green { background: var(--accent); }
-.tile-orange { background: var(--accent-secondary); }
-.tile-red { background: var(--accent-danger); }
+.tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.45), transparent 55%);
+  opacity: 0.7;
+ 
+}
+
+.tile-green { background: linear-gradient(135deg, #4dffac, var(--accent)); }
+.tile-orange { background: linear-gradient(135deg, #ffd580, var(--accent-secondary)); }
+.tile-red { background: linear-gradient(135deg, #ff9e80, var(--accent-danger)); }
 
 /* TABLE RESPONSIVA */
 .table-wrapper {
