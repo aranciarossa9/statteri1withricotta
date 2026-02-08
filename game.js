@@ -204,7 +204,11 @@ function handleGuess() {
 
   if (player.id === TARGET_PLAYER.id) {
     gameEnded = true;
-    showMessage(`🎉 Bravo! Il calciatore del giorno era ${TARGET_PLAYER.name}!`, "success");
+        resultMessage.classList.add("hidden");
+    resultMessage.textContent = "";
+    setTimeout(() => {
+      showMessage(`🎉 Bravo! Il calciatore del giorno era ${TARGET_PLAYER.name}!`, "success");
+    }, 3000);
     guessBtn.disabled = true;
     guessBtn.textContent = 'Vinto!';
   } 
